@@ -13,7 +13,33 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
-    futureCart = ApiService.getCart();
+    _refreshCart();
+  }
+
+  void _refreshCart() {
+    setState(() {
+      futureCart = ApiService.getCart();
+    });
+  }
+
+  Future<bool> _confirmDelete(BuildContext context, String productName) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Xác nhận'),
+        content: Text('Bạn có chắc muốn xóa "$productName" khỏi giỏ hàng không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // Không xóa
+            child: Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), // Xóa
+            child: Text('Xóa'),
+          ),
+        ],
+      ),
+    ) ?? false; // Mặc định là false nếu người dùng thoát dialog
   }
 
   @override
@@ -39,17 +65,89 @@ class _CartScreenState extends State<CartScreen> {
                       return ListTile(
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: Image.network(item.product.image, width: 50, height: 50, fit: BoxFit.cover),
+                          child: Image.network(
+                            item.product.image,
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image),
+                          ),
                         ),
                         title: Text(item.product.name, style: TextStyle(fontFamily: 'Roboto')),
                         subtitle: Text('White\n\$${item.product.price}', style: TextStyle(fontFamily: 'Roboto')),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(icon: Icon(Icons.remove), onPressed: () {}),
+                            IconButton(
+                              icon: Icon(Icons.remove),
+                              onPressed: () async {
+                                if (item.quantity > 1) {
+                                  try {
+                                    await ApiService.updateCartQuantity(item.product.id, item.quantity - 1);
+                                    _refreshCart();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Quantity updated')),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                } else {
+                                  // Số lượng = 1, giảm tiếp sẽ = 0 -> Hỏi xóa
+                                  final confirm = await _confirmDelete(context, item.product.name);
+                                  if (confirm) {
+                                    try {
+                                      await ApiService.removeFromCart(item.product.id);
+                                      _refreshCart();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Item removed')),
+                                      );
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error: $e')),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
+                            ),
                             Text('${item.quantity}'),
-                            IconButton(icon: Icon(Icons.add), onPressed: () {}),
-                            IconButton(icon: Icon(Icons.close), onPressed: () {}),
+                            IconButton(
+                              icon: Icon(Icons.add),
+                              onPressed: () async {
+                                try {
+                                  await ApiService.updateCartQuantity(item.product.id, item.quantity + 1);
+                                  _refreshCart();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Quantity updated')),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: $e')),
+                                  );
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.close),
+                              onPressed: () async {
+                                final confirm = await _confirmDelete(context, item.product.name);
+                                if (confirm) {
+                                  try {
+                                    await ApiService.removeFromCart(item.product.id);
+                                    _refreshCart();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Item removed')),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
                           ],
                         ),
                       );

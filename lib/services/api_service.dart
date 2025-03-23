@@ -6,7 +6,7 @@ import '../models/cart_item.dart';
 import '../models/checkout.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://172.20.10.14:3000/api';
+  static const String baseUrl = 'https://nodejs-ck-x8q8.onrender.com/api';
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -79,15 +79,20 @@ class ApiService {
     throw Exception('Lỗi khi lấy sản phẩm: ${response.body}');
   }
 
-  // Thêm vào giỏ hàng
+  // Thêm sản phẩm vào giỏ hàng
   static Future<void> addToCart(String productId, int quantity) async {
     final token = await getToken();
     final response = await http.post(
-      Uri.parse('$baseUrl/cart/add'),
-      headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+      Uri.parse('$baseUrl/cart/add'), // POST /api/cart
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
       body: jsonEncode({'productId': productId, 'quantity': quantity}),
     );
-    if (response.statusCode != 200) throw Exception('Lỗi khi thêm vào giỏ hàng');
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi khi thêm vào giỏ hàng: ${response.body}');
+    }
   }
 
   // Lấy giỏ hàng
@@ -99,11 +104,44 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final items = data['cart']['items'] as List;
-      return items.map((item) => CartItem.fromJson(item)).toList();
+      final List<dynamic> itemsJson = data['cart']['items'];
+      return itemsJson.map((json) => CartItem.fromJson(json)).toList();
     }
-    throw Exception('Lỗi khi lấy giỏ hàng');
+    throw Exception('Lỗi khi lấy giỏ hàng: ${response.body}');
   }
+
+  // Cập nhật số lượng
+  static Future<void> updateCartQuantity(String productId, int quantity) async {
+    final token = await getToken();
+    final response = await http.put(
+      Uri.parse('$baseUrl/cart/update'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'productId': productId, 'quantity': quantity}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi khi cập nhật số lượng: ${response.body}');
+    }
+  }
+
+  // Xóa sản phẩm khỏi giỏ hàng
+  static Future<void> removeFromCart(String productId) async {
+    final token = await getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/cart/remove'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'productId': productId}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi khi xóa sản phẩm: ${response.body}');
+    }
+  }
+
 
   // Thanh toán
   static Future<Checkout> checkout(Map<String, String> shippingInfo) async {
