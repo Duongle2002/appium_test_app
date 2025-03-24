@@ -27,10 +27,9 @@ class AuthProvider with ChangeNotifier {
     _token = await ApiService.login(email, password);
     notifyListeners();
   }
-
-  void logout() {
+  Future<void> logout() async {
+    await ApiService.clearToken();
     _token = null;
-    ApiService.clearToken(); // Xóa token khi đăng xuất
     notifyListeners();
   }
 

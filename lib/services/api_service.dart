@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'package:appium_test_app/models/blog.dart';
+import 'package:appium_test_app/models/cart_item.dart';
+import 'package:appium_test_app/models/checkout.dart';
+import 'package:appium_test_app/models/order.dart';
+import 'package:appium_test_app/models/product.dart';
+import 'package:appium_test_app/models/user.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/product.dart';
-import '../models/cart_item.dart';
-import '../models/checkout.dart';
 
 class ApiService {
   static const String baseUrl = 'https://nodejs-ck-x8q8.onrender.com/api';
@@ -65,6 +68,37 @@ class ApiService {
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['message'] ?? 'Đăng nhập thất bại');
+    }
+  }
+
+  // Lấy thông tin người dùng
+  static Future<User> getUserProfile() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      return User.fromJson(jsonData['user']);
+    } else {
+      throw Exception('Failed to load user profile: ${response.body}');
+    }
+  }
+
+  // Cập nhật thông tin người dùng
+  static Future<void> updateUserProfile(String name, String email) async {
+    final token = await getToken();
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/me'), // Giả định endpoint, thay đổi nếu cần
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'name': name, 'email': email}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update profile: ${response.body}');
     }
   }
   // Lấy danh sách sản phẩm
@@ -159,7 +193,8 @@ class ApiService {
   }
 
   // Lấy lịch sử đơn hàng
-  static Future<List<Checkout>> getOrderHistory() async {
+  // Chỉ hiển thị phần thay đổi
+  static Future<List<Order>> getOrderHistory() async {
     final token = await getToken();
     final response = await http.get(
       Uri.parse('$baseUrl/history'),
@@ -167,9 +202,46 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final orders = data['orders'] as List;
-      return orders.map((order) => Checkout.fromJson(order)).toList();
+      return (data['orders'] as List<dynamic>).map((orderJson) => Order.fromJson(orderJson)).toList();
     }
-    throw Exception('Lỗi khi lấy lịch sử đơn hàng');
+    throw Exception('Failed to load order history: ${response.body}');
+  }
+
+  // Lấy danh sách blog
+  static Future<List<Blog>> getBlogs() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/blogs'));
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success']) {
+          return (jsonData['data'] as List).map((blogJson) => Blog.fromJson(blogJson)).toList();
+        } else {
+          throw Exception('Failed to load blogs: ${jsonData['message']}');
+        }
+      } else {
+        throw Exception('Failed to load blogs: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching blogs: $e');
+    }
+  }
+
+  // Lấy chi tiết blog theo ID
+  static Future<Blog> getBlogById(String id) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/blogs/$id'));
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success']) {
+          return Blog.fromJson(jsonData['data']);
+        } else {
+          throw Exception('Failed to load blog: ${jsonData['message']}');
+        }
+      } else {
+        throw Exception('Failed to load blog: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching blog: $e');
+    }
   }
 }

@@ -18,7 +18,7 @@ class _CartScreenState extends State<CartScreen> {
 
   void _refreshCart() {
     setState(() {
-      futureCart = ApiService.getCart();
+      futureCart = ApiService.getCart() as Future<List<CartItem>>;
     });
   }
 
@@ -26,30 +26,27 @@ class _CartScreenState extends State<CartScreen> {
     return await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Xác nhận'),
-        content: Text('Bạn có chắc muốn xóa "$productName" khỏi giỏ hàng không?'),
+        title: Text('Xác nhận', style: Theme.of(context).textTheme.headlineLarge),
+        content: Text('Bạn có chắc muốn xóa "$productName" khỏi giỏ hàng không?', style: Theme.of(context).textTheme.bodyMedium),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false), // Không xóa
+            onPressed: () => Navigator.pop(context, false),
             child: Text('Hủy'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), // Xóa
+            onPressed: () => Navigator.pop(context, true),
             child: Text('Xóa'),
           ),
         ],
       ),
-    ) ?? false; // Mặc định là false nếu người dùng thoát dialog
+    ) ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('My cart'),
-        actions: [IconButton(icon: Icon(Icons.more_vert), onPressed: () {})],
-      ),
-      body: FutureBuilder<List<CartItem>>(
+    return Padding(
+      padding: EdgeInsets.all(16),
+      child: FutureBuilder<List<CartItem>>(
         future: futureCart,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
@@ -62,142 +59,127 @@ class _CartScreenState extends State<CartScreen> {
                     itemCount: cartItems.length,
                     itemBuilder: (context, index) {
                       final item = cartItems[index];
-                      return ListTile(
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(
-                            item.product.image,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image),
+                      return Card(
+                        child: ListTile(
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              item.product.image,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image),
+                            ),
                           ),
-                        ),
-                        title: Text(item.product.name, style: TextStyle(fontFamily: 'Roboto')),
-                        subtitle: Text('White\n\$${item.product.price}', style: TextStyle(fontFamily: 'Roboto')),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.remove),
-                              onPressed: () async {
-                                if (item.quantity > 1) {
-                                  try {
-                                    await ApiService.updateCartQuantity(item.product.id, item.quantity - 1);
-                                    _refreshCart();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Quantity updated')),
-                                    );
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
+                          title: Text(item.product.name, style: Theme.of(context).textTheme.bodyLarge),
+                          subtitle: Text('\$${item.product.price}', style: Theme.of(context).textTheme.bodyMedium),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.remove),
+                                onPressed: () async {
+                                  if (item.quantity > 1) {
+                                    try {
+                                      await ApiService.updateCartQuantity(item.product.id, item.quantity - 1);
+                                      _refreshCart();
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Quantity updated')));
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                    }
+                                  } else {
+                                    final confirm = await _confirmDelete(context, item.product.name);
+                                    if (confirm) {
+                                      try {
+                                        await ApiService.removeFromCart(item.product.id);
+                                        _refreshCart();
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Item removed')));
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                      }
+                                    }
                                   }
-                                } else {
-                                  // Số lượng = 1, giảm tiếp sẽ = 0 -> Hỏi xóa
+                                },
+                              ),
+                              Text('${item.quantity}', style: Theme.of(context).textTheme.bodyMedium),
+                              IconButton(
+                                icon: Icon(Icons.add),
+                                onPressed: () async {
+                                  try {
+                                    await ApiService.updateCartQuantity(item.product.id, item.quantity + 1);
+                                    _refreshCart();
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Quantity updated')));
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                  }
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.close),
+                                onPressed: () async {
                                   final confirm = await _confirmDelete(context, item.product.name);
                                   if (confirm) {
                                     try {
                                       await ApiService.removeFromCart(item.product.id);
                                       _refreshCart();
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Item removed')),
-                                      );
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Item removed')));
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error: $e')),
-                                      );
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                                     }
                                   }
-                                }
-                              },
-                            ),
-                            Text('${item.quantity}'),
-                            IconButton(
-                              icon: Icon(Icons.add),
-                              onPressed: () async {
-                                try {
-                                  await ApiService.updateCartQuantity(item.product.id, item.quantity + 1);
-                                  _refreshCart();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Quantity updated')),
-                                  );
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error: $e')),
-                                  );
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.close),
-                              onPressed: () async {
-                                final confirm = await _confirmDelete(context, item.product.name);
-                                if (confirm) {
-                                  try {
-                                    await ApiService.removeFromCart(item.product.id);
-                                    _refreshCart();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Item removed')),
-                                    );
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
-                                  }
-                                }
-                              },
-                            ),
-                          ],
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('NEW2025', style: TextStyle(fontFamily: 'Roboto')),
-                          Text('Promocode applied', style: TextStyle(color: Colors.green)),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Subtotal', style: TextStyle(fontFamily: 'Roboto')),
-                          Text('\$${subtotal.toStringAsFixed(2)}'),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Delivery Fee', style: TextStyle(fontFamily: 'Roboto')),
-                          Text('\$5.00'),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Checkout', style: TextStyle(fontFamily: 'Roboto', fontWeight: FontWeight.bold)),
-                          Text('\$${(subtotal + 5).toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pushNamed(context, '/checkout'),
-                        child: Text('Checkout for \$${(subtotal + 5).toStringAsFixed(2)}'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: Size(double.infinity, 48),
+                Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('NEW2025', style: Theme.of(context).textTheme.bodyMedium),
+                            Text('Promocode applied', style: TextStyle(color: Colors.green)),
+                          ],
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Subtotal', style: Theme.of(context).textTheme.bodyMedium),
+                            Text('\$${subtotal.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyMedium),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Delivery Fee', style: Theme.of(context).textTheme.bodyMedium),
+                            Text('\$5.00', style: Theme.of(context).textTheme.bodyMedium),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Checkout', style: Theme.of(context).textTheme.headlineLarge),
+                            Text('\$${(subtotal + 5).toStringAsFixed(2)}', style: Theme.of(context).textTheme.headlineLarge),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(context, '/checkout'),
+                          child: Text('Checkout for \$${(subtotal + 5).toStringAsFixed(2)}'),
+                          style: ElevatedButton.styleFrom(minimumSize: Size(double.infinity, 48)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
