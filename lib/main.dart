@@ -57,6 +57,14 @@ class MyApp extends StatelessWidget {
           titleTextStyle: TextStyle(fontFamily: 'Poppins', fontSize: 20, color: Colors.black),
           iconTheme: IconThemeData(color: Colors.black),
         ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Colors.white, // Nền trắng cho Light Mode
+          selectedItemColor: Color(0xFF8A4AF0), // Màu tím cho icon/nhãn được chọn
+          unselectedItemColor: Colors.black54, // Màu xám đậm cho icon/nhãn không chọn
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed, // Hiển thị tất cả icon và nhãn
+        ),
       ),
       darkTheme: ThemeData(
         primaryColor: Color(0xFF2A1B3D), // Dark purple
@@ -85,6 +93,14 @@ class MyApp extends StatelessWidget {
           elevation: 0,
           titleTextStyle: TextStyle(fontFamily: 'Poppins', fontSize: 20, color: Colors.white),
           iconTheme: IconThemeData(color: Colors.white),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Color(0xFF1F1F1F), // Nền tối cho Dark Mode
+          selectedItemColor: Color(0xFF8A4AF0), // Màu tím cho icon/nhãn được chọn
+          unselectedItemColor: Colors.white70, // Màu trắng nhạt cho icon/nhãn không chọn
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed, // Hiển thị tất cả icon và nhãn
         ),
       ),
       themeMode: themeProvider.themeMode,

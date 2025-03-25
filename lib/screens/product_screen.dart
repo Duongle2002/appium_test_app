@@ -15,7 +15,7 @@ class _ProductScreenState extends State<ProductScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this); // Đảm bảo length là 4
     futureProducts = ApiService.getProducts() as Future<List<Product>>;
   }
 
@@ -27,9 +27,14 @@ class _ProductScreenState extends State<ProductScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TabBar(
+    final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final selectedCategory = arguments?['category'] as String?;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(selectedCategory ?? 'Products', style: TextStyle(fontFamily: 'Poppins')),
+        bottom: selectedCategory == null
+            ? TabBar(
           controller: _tabController,
           labelColor: Theme.of(context).textTheme.bodyLarge!.color,
           unselectedLabelColor: Colors.grey,
@@ -37,30 +42,46 @@ class _ProductScreenState extends State<ProductScreen> with SingleTickerProvider
             Tab(text: 'Sale'),
             Tab(text: 'New Arrival'),
             Tab(text: 'Best Seller'),
+            Tab(text: 'All'),
           ],
-        ),
-        Expanded(
-          child: FutureBuilder<List<Product>>(
-            future: futureProducts,
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                final allProducts = snapshot.data!;
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildProductGrid(allProducts.where((p) => p.sale).toList()),
-                    _buildProductGrid(allProducts.where((p) => p.newArrival).toList()),
-                    _buildProductGrid(allProducts.where((p) => p.bestSeller).toList()),
-                  ],
-                );
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Lỗi: ${snapshot.error}'));
-              }
-              return Center(child: CircularProgressIndicator());
-            },
-          ),
-        ),
-      ],
+        )
+            : null,
+      ),
+      body: FutureBuilder<List<Product>>(
+        future: futureProducts,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            var allProducts = snapshot.data!;
+            if (selectedCategory != null) {
+              allProducts = allProducts.where((p) => p.category == selectedCategory).toList();
+              return allProducts.isEmpty
+                  ? Center(child: Text('No products available in this category', style: Theme.of(context).textTheme.bodyMedium))
+                  : _buildProductGrid(allProducts);
+            } else {
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  allProducts.where((p) => p.sale).isEmpty
+                      ? Center(child: Text('No sale products available', style: Theme.of(context).textTheme.bodyMedium))
+                      : _buildProductGrid(allProducts.where((p) => p.sale).toList()),
+                  allProducts.where((p) => p.newArrival).isEmpty
+                      ? Center(child: Text('No new arrival products available', style: Theme.of(context).textTheme.bodyMedium))
+                      : _buildProductGrid(allProducts.where((p) => p.newArrival).toList()),
+                  allProducts.where((p) => p.bestSeller).isEmpty
+                      ? Center(child: Text('No best seller products available', style: Theme.of(context).textTheme.bodyMedium))
+                      : _buildProductGrid(allProducts.where((p) => p.bestSeller).toList()),
+                  allProducts.isEmpty
+                      ? Center(child: Text('No products available', style: Theme.of(context).textTheme.bodyMedium))
+                      : _buildProductGrid(allProducts),
+                ],
+              );
+            }
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Lỗi: ${snapshot.error}'));
+          }
+          return Center(child: CircularProgressIndicator());
+        },
+      ),
     );
   }
 

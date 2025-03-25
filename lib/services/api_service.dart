@@ -178,18 +178,18 @@ class ApiService {
 
 
   // Thanh toán
-  static Future<Checkout> checkout(Map<String, String> shippingInfo) async {
+  static Future<Checkout> checkout(Map<String, dynamic> checkoutData) async {
     final token = await getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/checkout'),
       headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-      body: jsonEncode(shippingInfo),
+      body: jsonEncode(checkoutData),
     );
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return Checkout.fromJson(data['checkout']);
     }
-    throw Exception('Lỗi khi thanh toán: ${response.body}');
+    throw Exception('Checkout failed: ${response.body}');
   }
 
   // Lấy lịch sử đơn hàng
