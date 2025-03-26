@@ -12,11 +12,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Product>> futureProducts;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     futureProducts = ApiService.getProducts() as Future<List<Product>>;
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase().trim();
+      });
+    });
   }
 
   List<Map<String, dynamic>> _getCategories(List<Product> products) {
@@ -55,13 +62,34 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Thanh tìm kiếm
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search products...',
+              hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).textTheme.bodyMedium!.color!.withOpacity(0.6),
+              ),
+              prefixIcon: Icon(Icons.search, color: Theme.of(context).iconTheme.color),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Color(0xFF8A4AF0)),
+              ),
+            ),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          SizedBox(height: 24),
           _buildBanner(),
           SizedBox(height: 24),
           _buildSectionTitle(context, 'Special Offers'),
           _buildSpecialOffers(),
           SizedBox(height: 24),
           _buildSectionTitle(context, 'Categories', seeAll: true, onSeeAll: () {
-            Navigator.pushNamed(context, '/products'); // Chuyển đến ProductScreen không lọc
+            Navigator.pushNamed(context, '/products');
           }),
           _buildCategories(),
           SizedBox(height: 24),
@@ -149,7 +177,13 @@ class _HomeScreenState extends State<HomeScreen> {
       future: futureProducts,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final offers = snapshot.data!.where((p) => p.sale).toList();
+          final offers = snapshot.data!
+              .where((p) => p.sale)
+              .where((p) => _searchQuery.isEmpty || p.name.toLowerCase().contains(_searchQuery))
+              .toList();
+          if (offers.isEmpty && _searchQuery.isNotEmpty) {
+            return Center(child: Text('No special offers found', style: Theme.of(context).textTheme.bodyLarge));
+          }
           return SizedBox(
             height: 220,
             child: ListView.builder(
@@ -165,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         } else if (snapshot.hasError) {
-          return Center(child: Text('Lỗi: ${snapshot.error}'));
+          return Center(child: Text('Error: ${snapshot.error}', style: Theme.of(context).textTheme.bodyLarge));
         }
         return Center(child: CircularProgressIndicator());
       },
@@ -177,7 +211,10 @@ class _HomeScreenState extends State<HomeScreen> {
       future: futureProducts,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final categories = _getCategories(snapshot.data!);
+          final filteredProducts = snapshot.data!
+              .where((p) => _searchQuery.isEmpty || p.name.toLowerCase().contains(_searchQuery))
+              .toList();
+          final categories = _getCategories(filteredProducts);
           return GridView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
@@ -217,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           );
         } else if (snapshot.hasError) {
-          return Center(child: Text('Lỗi: ${snapshot.error}'));
+          return Center(child: Text('Error: ${snapshot.error}', style: Theme.of(context).textTheme.bodyLarge));
         }
         return Center(child: CircularProgressIndicator());
       },
@@ -229,7 +266,13 @@ class _HomeScreenState extends State<HomeScreen> {
       future: futureProducts,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final newArrivals = snapshot.data!.where((p) => p.newArrival).toList();
+          final newArrivals = snapshot.data!
+              .where((p) => p.newArrival)
+              .where((p) => _searchQuery.isEmpty || p.name.toLowerCase().contains(_searchQuery))
+              .toList();
+          if (newArrivals.isEmpty && _searchQuery.isNotEmpty) {
+            return Center(child: Text('No new arrivals found', style: Theme.of(context).textTheme.bodyLarge));
+          }
           return SizedBox(
             height: 220,
             child: ListView.builder(
@@ -245,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         } else if (snapshot.hasError) {
-          return Center(child: Text('Lỗi: ${snapshot.error}'));
+          return Center(child: Text('Error: ${snapshot.error}', style: Theme.of(context).textTheme.bodyLarge));
         }
         return Center(child: CircularProgressIndicator());
       },
@@ -257,6 +300,9 @@ class _HomeScreenState extends State<HomeScreen> {
       width: 150,
       margin: EdgeInsets.only(right: 16),
       child: Card(
+        shape: Theme.of(context).cardTheme.shape,
+        elevation: Theme.of(context).cardTheme.elevation,
+        color: Theme.of(context).cardTheme.color,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -275,7 +321,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.name, style: Theme.of(context).textTheme.bodyLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    product.name,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   SizedBox(height: 4),
                   Row(
                     children: [
@@ -300,5 +351,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }
