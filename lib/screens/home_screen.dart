@@ -63,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Thanh tìm kiếm
+          SizedBox(height: 10),
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
