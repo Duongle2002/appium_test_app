@@ -11,20 +11,28 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isFormValid = false;
   bool _isLoading = false; // Trạng thái loading
 
-  @override
-  void initState() {
-    super.initState();
-    _emailController.addListener(_validateForm);
-    _passwordController.addListener(_validateForm);
-  }
+  void _validateAndLogin() async {
+    if (!_formKey.currentState!.validate()) return; // Kiểm tra form hợp lệ
 
-  void _validateForm() {
     setState(() {
-      _isFormValid = _formKey.currentState?.validate() ?? false;
+      _isLoading = true; // Bật trạng thái loading
     });
+
+    try {
+      await Provider.of<AuthProvider>(context, listen: false)
+          .login(_emailController.text, _passwordController.text);
+      Navigator.pushReplacementNamed(context, '/');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false; // Tắt loading
+      });
+    }
   }
 
   @override
@@ -76,26 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isFormValid && !_isLoading
-                    ? () async {
-                  setState(() {
-                    _isLoading = true; // Bật loading
-                  });
-                  try {
-                    await Provider.of<AuthProvider>(context, listen: false)
-                        .login(_emailController.text, _passwordController.text);
-                    Navigator.pushReplacementNamed(context, '/');
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
-                  } finally {
-                    setState(() {
-                      _isLoading = false; // Tắt loading
-                    });
-                  }
-                }
-                    : null,
+                onPressed: _isLoading ? null : _validateAndLogin, // Kiểm tra form trước khi đăng nhập
                 child: _isLoading
                     ? SizedBox(
                   width: 20,
