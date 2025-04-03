@@ -28,6 +28,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Your Destination',
       theme: ThemeData(
         primaryColor: Color(0xFFF8E1E9), // Pastel pink
