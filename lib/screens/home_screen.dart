@@ -173,6 +173,39 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Widget _buildSpecialOffers() {
+  //   return FutureBuilder<List<Product>>(
+  //     future: futureProducts,
+  //     builder: (context, snapshot) {
+  //       if (snapshot.hasData) {
+  //         final offers = snapshot.data!
+  //             .where((p) => p.sale)
+  //             .where((p) => _searchQuery.isEmpty || p.name.toLowerCase().contains(_searchQuery))
+  //             .toList();
+  //         if (offers.isEmpty && _searchQuery.isNotEmpty) {
+  //           return Center(child: Text('No special offers found', style: Theme.of(context).textTheme.bodyLarge));
+  //         }
+  //         return SizedBox(
+  //           height: 220,
+  //           child: ListView.builder(
+  //             scrollDirection: Axis.horizontal,
+  //             itemCount: offers.length,
+  //             itemBuilder: (context, index) {
+  //               final offer = offers[index];
+  //               return GestureDetector(
+  //                 onTap: () => Navigator.pushNamed(context, '/product_detail', arguments: offer),
+  //                 child: _buildProductCard(offer),
+  //               );
+  //             },
+  //           ),
+  //         );
+  //       } else if (snapshot.hasError) {
+  //         return Center(child: Text('Error: ${snapshot.error}', style: Theme.of(context).textTheme.bodyLarge));
+  //       }
+  //       return Center(child: CircularProgressIndicator());
+  //     },
+  //   );
+  // }
   Widget _buildSpecialOffers() {
     return FutureBuilder<List<Product>>(
       future: futureProducts,
@@ -185,19 +218,20 @@ class _HomeScreenState extends State<HomeScreen> {
           if (offers.isEmpty && _searchQuery.isNotEmpty) {
             return Center(child: Text('No special offers found', style: Theme.of(context).textTheme.bodyLarge));
           }
-          return SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: offers.length,
-              itemBuilder: (context, index) {
-                final offer = offers[index];
-                return GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/product_detail', arguments: offer),
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: offers.length,
+            itemBuilder: (context, index) {
+              final offer = offers[index];
+              return GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/product_detail', arguments: offer),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
                   child: _buildProductCard(offer),
-                );
-              },
-            ),
+                ),
+              );
+            },
           );
         } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}', style: Theme.of(context).textTheme.bodyLarge));
